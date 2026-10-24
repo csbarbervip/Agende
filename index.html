@@ -71,10 +71,10 @@ const DS=['dom','seg','ter','qua','qui','sex','sáb'];
 const BARBER_WA='5564996266993';
 const SLOTS=[];for(let h=9;h<19;h++){SLOTS.push(String(h).padStart(2,'0')+':00',String(h).padStart(2,'0')+':30')}
 let services=ld('cs_services',[
- {id:'corte',name:'Corte de cabelo',price:40,dur:30,cut:true},
+ {id:'corte',name:'Corte de cabelo',price:35,dur:30,cut:true},
  {id:'barba',name:'Barba',price:30,dur:20,cut:false},
- {id:'sobr',name:'Sobrancelha',price:15,dur:15,cut:false},
- {id:'combo',name:'Combo completo',price:75,dur:60,cut:true}]);
+ {id:'sobr',name:'Sobrancelha',price:10,dur:15,cut:false},
+ {id:'combo',name:'Combo completo',price:70,dur:60,cut:true}]);
 let appts=ld('cs_appts',[]),blocked=ld('cs_blocked',{}),client=ld('cs_client',null);
 const S={tab:'book',step:'svc',svc:null,date:iso(new Date()),time:null,last:null,adm:false,at:'hoje',ad:iso(new Date()),bd:iso(new Date())};
 const days=()=>Array.from({length:14},(_,i)=>{const d=new Date();d.setDate(d.getDate()+i);return d});
