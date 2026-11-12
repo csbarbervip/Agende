@@ -1,4 +1,4 @@
-// sync.js (versão 2) - horários bloqueados + agendamentos compartilhados (Supabase)
+// sync.js (versão 3) - horários bloqueados + agendamentos + cadastro e carimbos dos clientes (Supabase)
 // Carregue DEPOIS do script principal do index.html.
 
 const SB_URL = 'https://aykqgrmllckigcmophre.supabase.co'; // Project URL
@@ -194,6 +194,91 @@ window.confirmB = async function (free) {
   render();
 };
 
+// ---------- CLIENTE: cadastro / entrada (reconhece pelo WhatsApp + nascimento) ----------
+window.doReg = async function () {
+  const n = $('#rn').value.trim(), b = $('#rb').value, w = $('#rw').value.replace(/\D/g, '');
+  if (n.length < 2) return $('#re').textContent = 'Informe seu nome.';
+  if (!b) return $('#re').textContent = 'Informe a data de nascimento.';
+  if (w.length !== 11 || w[2] !== '9') return $('#re').textContent = 'WhatsApp inválido. Use DDD + 9 dígitos.';
+  $('#re').textContent = 'Entrando...';
+  try {
+    const r = await call('register_client', { p_wa: w, p_name: n, p_birth: b });
+    if (!r.ok) {
+      const t = await r.text();
+      if (t.includes('DADOS_NAO_CONFEREM')) {
+        return $('#re').textContent = 'Esse WhatsApp já tem cadastro com outra data de nascimento. Confira os dados.';
+      }
+      throw new Error('falhou');
+    }
+    const c = await r.json();
+    client = { name: c.name, birth: c.birth, wa: w, stamps: Number(c.stamps) || 0, legacy: 0 };
+  } catch (e) {
+    // sem internet: segue só neste aparelho e sincroniza depois
+    client = { name: n, birth: b, wa: w, stamps: 0, legacy: 0 };
+  }
+  sv('cs_client', client);
+  loadAll();
+  render();
+};
+
+// ---------- BARBEIRO: carimbar corte (PIN conferido no servidor) ----------
+window.stamp = async function () {
+  const el = $('#sp2');
+  const pin = el.value;
+  if (!pin) return;
+  try {
+    const r = await call('admin_add_stamp', { p_pin: pin, p_wa: client.wa });
+    if (!r.ok) {
+      const t = await r.text();
+      el.value = '';
+      if (t.includes('PIN incorreto')) { el.placeholder = 'PIN incorreto'; return; }
+      if (t.includes('CLIENTE_NAO_ENCONTRADO')) { el.placeholder = 'Cliente ainda não sincronizou'; return; }
+      throw new Error('falhou');
+    }
+    const n = await r.json();
+    client.stamps = Number(n) + (client.legacy || 0);
+    sv('cs_client', client);
+    render();
+  } catch (e) {
+    el.value = '';
+    el.placeholder = 'Sem internet. Tente de novo.';
+  }
+};
+
+// ---------- clientes antigos: sobe o cadastro para o servidor (uma vez) ----------
+async function syncClient() {
+  if (!client) return;
+  try {
+    if (client.legacy === undefined) { client.legacy = client.stamps || 0; sv('cs_client', client); }
+    const r = await call('register_client', { p_wa: client.wa, p_name: client.name, p_birth: client.birth });
+    if (!r.ok) return;
+    const c = await r.json();
+    const novo = (Number(c.stamps) || 0) + (client.legacy || 0);
+    if (novo !== client.stamps) {
+      client.stamps = novo;
+      sv('cs_client', client);
+      if (S.tab === 'pts' || (S.tab === 'book' && S.step === 'svc')) render();
+    }
+  } catch (e) {}
+}
+
+// ---------- atualiza os carimbos vindos do servidor ----------
+async function refreshStamps() {
+  if (!client || S.tab === 'adm') return;
+  try {
+    const r = await call('get_client', { p_wa: client.wa });
+    if (!r.ok) return;
+    const c = await r.json();
+    if (!c) return;
+    const novo = (Number(c.stamps) || 0) + (client.legacy || 0);
+    if (novo !== client.stamps) {
+      client.stamps = novo;
+      sv('cs_client', client);
+      if (S.tab === 'pts' || (S.tab === 'book' && S.step === 'svc')) render();
+    }
+  } catch (e) {}
+}
+
 // ---------- carrega assim que o admin entra no painel ----------
 let admCarregado = false;
 const _render = render;
@@ -204,5 +289,7 @@ window.render = function () {
 };
 
 loadAll();
+syncClient();
 setInterval(loadAll, 20000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) loadAll(); });
+setInterval(refreshStamps, 20000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { loadAll(); refreshStamps(); } });
