@@ -96,7 +96,7 @@ function head(t,s){return `<div class="brand"><img src="${LOGO}" alt="Barbearia 
 function maskWa(v){v=v.replace(/\D/g,'').slice(0,11);let o=v;if(v.length>2)o='('+v.slice(0,2)+') '+v.slice(2);if(v.length>7)o='('+v.slice(0,2)+') '+v.slice(2,7)+'-'+v.slice(7);return o}
 function render(){
  const a=$('#app');
- $('#nav').innerHTML=(client?[['book','Agendar'],['pts','Meus pontos']]:S.tab==='adm'?[['book','Voltar']]:[]).map(([k,l])=>`<button class="${S.tab===k?'on':''}" onclick="S.tab='${k}';if(k==='book'&&S.step==='ok')S.step='svc';render()">${l}</button>`).join('');
+ $('#nav').innerHTML=(client?[['book','Agendar'],['pts','Meus pontos']]:S.tab==='adm'?[['book','Voltar']]:[]).map(([k,l])=>`<button class="${S.tab===k?'on':''}" onclick="S.tab='${k}';if('${k}'==='book'&&S.step==='ok')S.step='svc';render()">${l}</button>`).join('');
  if(!client&&S.tab!=='adm'){a.innerHTML=reg();return}
  a.innerHTML=S.tab==='book'?book():S.tab==='pts'?ptsView():admin();
 }
